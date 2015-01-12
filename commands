@@ -63,11 +63,4 @@ case "$1" in
     nvcc:port                                   <app>                  will display the current container port
 EOF
     ;;
-
-  *)
-
-    echo "Command $1 does not exist"
-
-    ;;
-
 esac
