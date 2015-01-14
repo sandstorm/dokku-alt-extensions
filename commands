@@ -21,6 +21,45 @@ fi
 
 case "$1" in
 
+  # helper to backup a data volume; specifically everything inside "/app" (as *CONVENTION*)
+  # So, if you create a volume using "volume:create notes_volume /app/var", it gets *backed up*.
+  # If you create a volume using "volume:create notes_volume /var", it does NOT get *backed up*.
+  # Furthermore, 2 special files are included in the backup:
+  # .paths -- the paths with which the volume was created
+  # .app-links -- the current connections to the apps
+  #
+  # HOW TO USE:
+  # either: volume:backup > /your/local/backup.tar
+  # or: volume:backup /path/on/server.tar
+  volume:backup)
+    source "$(dirname $0)/../data-volumes/vars"
+    volume_info "$2"
+    OUTPUT_FILE="$3"
+
+    BACKUP_TMP_DIR=$(mktemp -d)
+    BACKUP_TMP_FILE="$BACKUP_TMP_DIR/backup.tar"
+
+    docker run --volumes-from="$VOLUME_CONTAINER" --rm=true -v $BACKUP_TMP_DIR:/backup "$VOLUME_IMAGE" tar -cf /backup/backup.tar app/
+    
+    pushd "$BACKUP_TMP_DIR" > /dev/null
+    tar -xf backup.tar
+    rm -rf backup.tar
+    cp $VOLUME_PATHS .
+    ls -1 "$VOLUME_CONFIG_DIR" > .app-links
+    tar -cf backup.tar  --exclude=backup.tar .
+    popd > /dev/null
+    
+    # if no file specified, output to stdout
+    if [[ -z $OUTPUT_FILE ]]; then
+      cat $BACKUP_TMP_FILE
+    else
+      mv $BACKUP_TMP_FILE $OUTPUT_FILE
+    fi
+
+    rm -rf $BACKUP_TMP_DIR
+    
+    ;;
+
   nvcc:nginx.conf)
 
       cat "$DOKKU_ROOT/$APP/nginx.conf"
