@@ -60,21 +60,26 @@ case "$1" in
     
     ;;
     
+  # helper to re-create a backed-up data volume
+  # The following two usages are possible:
+  # remote    : base64 -i bu.tar | ssh dokku@... volume:restore data-volume-name
+  # local file:  ssh dokku@... volume:restore data-volume-name /your/path
   volume:restore)
     source "$(dirname $0)/../data-volumes/vars"
     volume_info "$2"
 
     BACKUP_TMP_DIR=$(mktemp -d)
     BACKUP_TMP_FILE="$BACKUP_TMP_DIR/backup.tar"
-    OUTPUT_FILE="$3"
+    INPUT_FILE="$3"
 
     pushd "$BACKUP_TMP_DIR" > /dev/null
-    if [[ -z $OUTPUT_FILE ]]; then
+    if [[ -z INPUT_FILE ]]; then
       cat - | base64 -d > $BACKUP_TMP_FILE
     else
-      echo "TODO"
+      cp "$INPUT_FILE" "$BACKUP_TMP_FILE"
     fi
 
+    # the following code is implemented like volume:create
     DOCKER_ARGS=()
     # Verify paths
     for path in $(tar xf $BACKUP_TMP_FILE ./.paths -O); do
@@ -142,6 +147,12 @@ case "$1" in
     nvcc:nginx.conf.d                           <app>                  display the current nginx.conf.d/ directory contents
     nvcc:nginx-vhosts-custom-configuration.conf <app>                  will display the current nginx.conf.d/nginx-vhosts-custom-configuration.conf contents
     nvcc:port                                   <app>                  will display the current container port
+    
+    volume:backup <name> | base64 -D > /your/local/backup.tar
+    volume:backup <name> /file/on/server.tar
+    base64 -i backup.tar | ssh dokku@... volume:restore <name>
+    ssh dokku@... volume:restore <name> /file/on/server.tar
+  
 EOF
     ;;
 esac
