@@ -59,6 +59,48 @@ case "$1" in
     rm -rf $BACKUP_TMP_DIR
     
     ;;
+    
+  volume:restore)
+    source "$(dirname $0)/../data-volumes/vars"
+    volume_info "$2"
+
+    BACKUP_TMP_DIR=$(mktemp -d)
+    BACKUP_TMP_FILE="$BACKUP_TMP_DIR/backup.tar"
+    OUTPUT_FILE="$3"
+
+    pushd "$BACKUP_TMP_DIR" > /dev/null
+    if [[ -z $OUTPUT_FILE ]]; then
+      cat - | base64 -d > $BACKUP_TMP_FILE
+    else
+      echo "TODO"
+    fi
+
+    DOCKER_ARGS=()
+    # Verify paths
+    for path in $(tar xf $BACKUP_TMP_FILE ./.paths -O); do
+      if [[ "$NAME" != "root" ]]; then
+        ipath="${path//:/}"
+        [[ "$path" != "$ipath" ]] && fail "$path: Path is forbidden"
+      fi
+      DOCKER_ARGS+=("-v" "$path")
+    done
+
+    # Create data container
+    docker run --name "$VOLUME_CONTAINER" "${DOCKER_ARGS[@]}" -v $BACKUP_TMP_DIR:/backup "$VOLUME_IMAGE" tar -xvf /backup/backup.tar
+
+    # Create data links
+    mkdir -p "$VOLUME_CONFIG_DIR"
+
+    echo "$(tar xf $BACKUP_TMP_FILE ./.paths -O)" > "$VOLUME_PATHS"
+    
+    echo "APP LINKS (shall be created manually)"
+    for appLink in $(tar xf $BACKUP_TMP_FILE ./.app-links -O); do
+      echo "dokku volume:link $appLink $2"
+    done
+    
+    rm -Rf "$BACKUP_TMP_DIR"
+    
+    ;;
 
   nvcc:nginx.conf)
 
