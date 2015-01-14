@@ -150,8 +150,8 @@ case "$1" in
     
     volume:backup <name> | base64 -D > /your/local/backup.tar
     volume:backup <name> /file/on/server.tar
-    base64 -i backup.tar | ssh dokku@... volume:restore <name>
-    ssh dokku@... volume:restore <name> /file/on/server.tar
+    volume:restore -- remote usage:   base64 -i backup.tar | ssh dokku@... volume:restore <name>
+    volume:restore <name> /file/on/server.tar
   
 EOF
     ;;
