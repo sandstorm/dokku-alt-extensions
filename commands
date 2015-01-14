@@ -29,7 +29,7 @@ case "$1" in
   # .app-links -- the current connections to the apps
   #
   # HOW TO USE:
-  # either: volume:backup > /your/local/backup.tar
+  # either: volume:backup | base64 -D > /your/local/backup.tar
   # or: volume:backup /path/on/server.tar
   volume:backup)
     source "$(dirname $0)/../data-volumes/vars"
@@ -51,7 +51,7 @@ case "$1" in
     
     # if no file specified, output to stdout
     if [[ -z $OUTPUT_FILE ]]; then
-      cat $BACKUP_TMP_FILE
+      cat $BACKUP_TMP_FILE | base64 -w 0
     else
       mv $BACKUP_TMP_FILE $OUTPUT_FILE
     fi
