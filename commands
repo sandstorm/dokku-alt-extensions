@@ -35,7 +35,7 @@ case "$1" in
     fi
 
     echo "Backing up to $BACKUP_PATH"
-    rm -rf "$BACKUP_PATH"
+    rm -rf "$BACKUP_PATH/*"
     mkdir -p "$BACKUP_PATH"
 
     # metadata (env vars etc)
