@@ -21,6 +21,57 @@ fi
 
 case "$1" in
 
+  # create a full backup to a target directory on the server; including:
+  # - all metadata
+  # - all volumes
+  # - all LINKED MySQL and Postgres Databases
+  #
+  # WARNING: non-linked MySQL / Postgres DBs are NOT backed up!!!
+  fullbackup)
+    BACKUP_PATH="$2"
+    if [[ "$BACKUP_PATH" == "" ]] ; then
+      echo "Backup path not specified"
+      exit 1
+    fi
+
+    echo "Backing up to $BACKUP_PATH"
+    rm -rf "$BACKUP_PATH"
+    mkdir -p "$BACKUP_PATH"
+
+    # metadata (env vars etc)
+    echo "- metadata"
+    dokku backup:export "$BACKUP_PATH/metadata.tar"
+    
+    # volumes
+    mkdir -p "$BACKUP_PATH/volumes"
+    for volume in $(dokku volume:list); do
+      echo "- volume $volume"
+      dokku volume:backup $volume "$BACKUP_PATH/volumes/$volume.tar"
+    done
+
+    # databases
+    mkdir -p "$BACKUP_PATH/databases"
+    for app in $(dokku list); do
+    
+      # postgres
+      for db in $(dokku postgresql:list $app); do
+        echo "- app $app: postgresDB $db"
+        mkdir -p "$BACKUP_PATH/databases/$app"
+        mkdir -p "$BACKUP_PATH/databases/$app/postgresql/"
+        dokku postgresql:dump $app $db > "$BACKUP_PATH/databases/$app/postgresql/$db.sql"
+      done
+      
+      # mariadb (mysql)
+      for db in $(dokku mariadb:list $app); do
+        echo "- app $app: mariaDB $db"
+        mkdir -p "$BACKUP_PATH/databases/$app"
+        mkdir -p "$BACKUP_PATH/databases/$app/mariadb/"
+        dokku mariadb:dump $app $db > "$BACKUP_PATH/databases/$app/mariadb/$db.sql"
+      done
+    done
+
+    ;;
+
   # helper to backup a data volume; specifically everything inside "/app" (as *CONVENTION*)
   # So, if you create a volume using "volume:create notes_volume /app/var", it gets *backed up*.
   # If you create a volume using "volume:create notes_volume /var", it does NOT get *backed up*.
@@ -153,6 +204,7 @@ case "$1" in
     volume:restore -- remote usage: base64 -i backup.tar ⎢ ssh dokku@... volume:restore <name>
     volume:restore <name> /file/on/server.tar
   
+    fullbackup /directory/on/server                                  do a full backup to the target directory on the server (metadata, volumes, linked MySQL and Postgres DBs)
 EOF
     ;;
 esac
