@@ -148,9 +148,9 @@ case "$1" in
     nvcc:nginx-vhosts-custom-configuration.conf <app>                  will display the current nginx.conf.d/nginx-vhosts-custom-configuration.conf contents
     nvcc:port                                   <app>                  will display the current container port
     
-    volume:backup <name> | base64 -D > /your/local/backup.tar
+    volume:backup <name> ⎢ base64 -D > /your/local/backup.tar
     volume:backup <name> /file/on/server.tar
-    volume:restore -- remote usage:   base64 -i backup.tar | ssh dokku@... volume:restore <name>
+    volume:restore -- remote usage: base64 -i backup.tar ⎢ ssh dokku@... volume:restore <name>
     volume:restore <name> /file/on/server.tar
   
 EOF
