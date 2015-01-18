@@ -1,18 +1,31 @@
-# dokku-nginx-vhosts-custom-configuration
+# Sandstorm Media Extensions for [Dokku-Alt](https://github.com/dokku-alt/dokku-alt)
 
-[Dokku](https://github.com/progrium/dokku) plugin to add custom configuration directives to the nginx vhost configuration on the dokku host.
-
-## Background
-
-Relevant use cases for when the nginx vhost configuration needs to be customized can be to set proxy timeouts in order to allow long running requests, setting specific SSL directives, enabled uploading of large files and the like.
+This package was originally forked from [dokku-nginx-vhosts-custom-configuration](https://github.com/neam/dokku-nginx-vhosts-custom-configuration);
+but has been customized and modified heavily for our usage at Sandstorm Media.
 
 ## Installation
 
 ```bash
-git clone https://github.com/neam/dokku-nginx-vhosts-custom-configuration.git /var/lib/dokku/plugins/nginx-vhosts-custom-configuration
+git clone https://github.com/sandstorm/dokku-alt-extensions.git /var/lib/dokku-alt/plugins/dokku-alt-extensions
 ```
 
-## Simple usage
+## Features
+
+- add custom configuration  to the nginx vhost configuration on the dokku host
+- `volume:backup` backup volumes to tar files (everything inside `/app`)
+- `volume:restore` restore volumes from tar files
+- `fullbackup` backup the full dokku server. Currently supported:
+  - global configuration
+  - all volumes
+  - MYSQL / MariaDB and Postgres databases
+
+
+## Custom NGINX vhost Configuration
+
+Relevant use cases for when the nginx vhost configuration needs to be customized can be to set proxy timeouts in order to allow long running requests, setting specific SSL directives, enabled uploading of large files and the like.
+
+
+### Simple usage
 
 1. Add a file containing your custom configuration to your app repo. For instance, you can call it `nginx.inc.conf` and commit it in the root of your app's repository.
 
@@ -25,7 +38,7 @@ $ ssh dokku@server config:set <app> NGINX_VHOSTS_CUSTOM_CONFIGURATION=nginx.inc.
 
 You're done! This plugin will read app environment variable with in-container path to custom configuration file and import the custom configuration to the app-specific configuration on the  dokku host.
 
-## Additional commands
+### Additional commands
 
 `nvcc:nginx.conf` will display the current nginx.conf
 
