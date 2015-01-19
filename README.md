@@ -18,7 +18,7 @@ git clone https://github.com/sandstorm/dokku-alt-extensions.git /var/lib/dokku-a
   - global configuration
   - all volumes
   - MYSQL / MariaDB and Postgres databases
-
+- `copy` copy a container; including its persistent volume and MariaDB database, to a new container. Easily replicate a setup for testing!
 
 ## Custom NGINX vhost Configuration
 

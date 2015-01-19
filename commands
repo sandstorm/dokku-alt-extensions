@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
 
+# COPIED from git/commands!
+create_pre_receive_hook() {
+    PRERECEIVE_HOOK="$2/hooks/pre-receive"
+    cat > "$PRERECEIVE_HOOK" <<EOF
+#!/usr/bin/env bash
+set -e; set -o pipefail;
+cat | DOKKU_ROOT="$DOKKU_ROOT" dokku git-hook "$1"
+EOF
+    chmod +x "$PRERECEIVE_HOOK"
+}
+
+create_bare_repository() {
+    git init --bare "$2" > /dev/null
+    create_pre_receive_hook "$@"
+}
+# END COPIED from git/commands!
+
 # Check if name is specified
 if [[ $1 == nvcc ]] || [[ $1 == nvcc:* ]]; then
 
@@ -20,6 +37,97 @@ if [[ $1 == nvcc ]] || [[ $1 == nvcc:* ]]; then
 fi
 
 case "$1" in
+
+
+  # copy a container, including its volume and mariadb / mysql Database.
+  #
+  # USAGE: "copy <source-container> <dest-name>"
+  #
+  # - only works if container has exactly ONE volume
+  # - only works if container has exactly ONE Mariadb
+  # - the created database and volume have the same name as the container.
+  copy)
+    source "$(dirname $0)/../dokku_common"
+
+    check_app_name "$2"
+    [[ -d "$APP_DIR/refs" ]] || fail "source $APP: not found."
+    SOURCE_APP_DIR="$APP_DIR"
+    SOURCE_APP="$APP"
+
+    check_app_name "$3"
+    [[ -d "$APP_DIR/refs" ]] && fail "target $APP: already exists; so cannot copy to that."
+    verify_max_args 3 "$@"
+
+    SOURCE_VOLUME_NAME=""
+    for volume in $(dokku volume:list); do
+      if [[ "$volume" == "$APP" ]]; then
+        echo "ERROR: volume $APP already exists."
+        exit 1
+      fi
+
+      for appname in $(dokku volume:list:apps $volume); do
+        if [[ "$appname" == "$SOURCE_APP" ]]; then
+          if [[ "$SOURCE_VOLUME_NAME" != "" ]]; then
+            echo "ERROR: $SOURCE_APP has more than one source volume attached; this is not supported."
+            exit 1
+          fi
+
+          SOURCE_VOLUME_NAME=$volume
+        fi
+      done
+    done
+
+    echo "- Will create target app $APP"
+
+    if [[ "$SOURCE_VOLUME_NAME" != "" ]]; then
+      echo "- Will create target volume $APP"
+    fi
+
+    SOURCE_MARIADB_CONNECTIONS=$(dokku mariadb:list $SOURCE_APP | wc -l)
+    if [[ "1" == "$SOURCE_MARIADB_CONNECTIONS" ]]; then
+      echo "- Will create target database $APP"
+
+      # here, it might still fail
+      dokku mariadb:create "$APP"
+      rm -f /tmp/backup.sql
+      DBNAME=$(dokku mariadb:list $SOURCE_APP)
+      echo "USE $APP;" > /tmp/backup.sql
+      dokku mariadb:dump $SOURCE_APP ${DBNAME//[^a-zA-Z0-9_-]//} >> /tmp/backup.sql
+
+      cat /tmp/backup.sql | dokku mariadb:console:admin
+
+    elif [[ "0" == "$SOURCE_MARIADB_CONNECTIONS" ]]; then
+      echo "- Will not create database, as source has no database"
+    else
+      echo "- ERROR: more than one database found attached to $APP, aborting."
+      exit 1
+    fi
+
+    if [[ "$SOURCE_VOLUME_NAME" != "" ]]; then
+      rm -f /tmp/backup.tar
+      dokku volume:backup "$SOURCE_VOLUME_NAME" /tmp/backup.tar
+      dokku volume:restore "$APP" /tmp/backup.tar
+      rm /tmp/backup.tar
+    fi
+
+    create_bare_repository "$APP" "$APP_DIR"
+    cp "$SOURCE_APP_DIR/ENV" "$APP_DIR/ENV"
+
+    if [[ "1" == "$SOURCE_MARIADB_CONNECTIONS" ]]; then
+      dokku mariadb:link "$APP" "$APP"
+    fi
+
+    if [[ "$SOURCE_VOLUME_NAME" != "" ]]; then
+      dokku volume:link "$APP" "$APP"
+    fi
+
+    pushd $SOURCE_APP_DIR > /dev/null
+    git push --mirror "$APP_DIR"
+    popd > /dev/null
+
+    echo "all done"
+
+    ;;
 
   # create a full backup to a target directory on the server; including:
   # - all metadata
@@ -205,6 +313,7 @@ case "$1" in
     volume:restore <name> /file/on/server.tar
   
     fullbackup /directory/on/server                                  do a full backup to the target directory on the server (metadata, volumes, linked MySQL and Postgres DBs)
+    copy <source-app> <destination-app>            Copy container, attached volume, and attached MariaDB.
 EOF
     ;;
 esac
