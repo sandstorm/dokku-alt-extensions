@@ -300,8 +300,27 @@ case "$1" in
 
     ;;
 
+
+  mariadb:sshtunnel)
+
+      echo "To connect using Sequel Pro, use the following settings:"
+      echo "Type: SSH"
+      echo "MySQL-Host: `docker inspect --format '{{ .NetworkSettings.IPAddress }}' mariadb_single_container`"
+      echo "User: the user displayed by dokku config <app>"
+      echo "Password: the password displayed by dokku config <app>"
+      echo "Database: the password displayed by dokku config <app>"
+      echo ""
+      echo "SSH-Host: dokku2.sandstorm-media.de"
+      echo "SSH-User: <system-user on dokku2; e.g. like sebastian>"
+      echo ""
+      echo ""
+      echo "NOTE: The only dynamic part of the config which changes is the MySQL host."
+
+    ;;
+
   help)
     cat && cat<<EOF
+    mariadb:sshtunnel                                                  display the IP of the MariaDB instance
     nvcc:nginx.conf                             <app>                  display the current nginx.conf
     nvcc:nginx.conf.d                           <app>                  display the current nginx.conf.d/ directory contents
     nvcc:nginx-vhosts-custom-configuration.conf <app>                  will display the current nginx.conf.d/nginx-vhosts-custom-configuration.conf contents
