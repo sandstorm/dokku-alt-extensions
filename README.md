@@ -19,6 +19,62 @@ git clone https://github.com/sandstorm/dokku-alt-extensions.git /var/lib/dokku-a
   - all volumes
   - MYSQL / MariaDB and Postgres databases
 - `copy` copy a container; including its persistent volume and MariaDB database, to a new container. Easily replicate a setup for testing!
+- `mariadb:sshtunnel` get the information on how to connect using Sequel Pro
+
+
+## Creating a volume manually (e.g. replaying it from a backup)
+
+If you dokku-ize an existing application, you need to put files etc at some point into a *volume*. For this, you
+first need to prepare a special "tar" file, upload this one, and then run `dokku volume:restore` using this backup file.
+
+In this process, make sure that all your persistent data resides in one or multiple folders underneath `/app`.
+
+For the example, let's say you have persistent data inside `/app/Data/Persistent`. 
+
+So, you create the structure in the following way:
+
+```bash
+
+# create base directory where we're working in
+mkdir base-directory
+cd base-directory
+
+# this file contains information which apps are linked to it.
+# We just need to create an empty file here.
+touch .app-links
+
+mkdir app
+
+# now, create the directory you want to fill (which is persistent)
+mkdir -p app/Data/Persistent
+
+# here, place the files you need to have in that directory you just created.
+
+# the ".paths" file *MUST* contain the directories which are persistent, so we
+# add the "/app/Data/Persistent" directory there.
+echo "/app/Data/Persistent" > .paths
+
+# The tar command must look *exactly* like this in order to work
+tar -cf ../volume.tar .
+
+# Now, you can *validate* the tar-file using the following command:
+tar -tf ../volume.tar
+# In the above output, *all* files must start with "./" in order to work,
+# and "./.paths" and "./.app-links" must appear in the list.
+```
+
+Now, upload the `volume.tar` file using SCP, optionally gzipping it before (in order to
+reduce file size).
+
+The following step must then be *executed on the dokku host itself*:
+
+```bash
+dokku volume:restore new_volume_name /uploaded/volume.tar
+
+# Then, link the volume to the desired app:
+dokku volume:link <app> new_volume_name
+```
+
 
 ## Custom NGINX vhost Configuration
 
