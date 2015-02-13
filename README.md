@@ -64,7 +64,7 @@ tar -tf ../volume.tar
 ```
 
 Now, upload the `volume.tar` file using SCP, optionally gzipping it before (in order to
-reduce file size).
+reduce file size). Remember to use the ip from dokku and not your dokku-instance.
 
 The following step must then be *executed on the dokku host itself*:
 
@@ -74,6 +74,8 @@ dokku volume:restore new_volume_name /uploaded/volume.tar
 # Then, link the volume to the desired app:
 dokku volume:link <app> new_volume_name
 ```
+
+Remove the uploaded file after you are finished. 
 
 
 ## Custom NGINX vhost Configuration
